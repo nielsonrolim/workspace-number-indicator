@@ -77,13 +77,44 @@ class WorkspaceIndicator extends PanelMenu.Button {
 export default class WorkspaceNumberExtension extends Extension {
     enable() {
         this._settings = this.getSettings('org.gnome.shell.extensions.workspace-number-indicator');
+        this._addIndicator();
+        const onPositionChange = () => {
+            this._removeIndicator();
+            this._addIndicator();
+        };
+        this._positionSignal = this._settings.connect('changed::panel-position', onPositionChange);
+        this._leftPlacementSignal = this._settings.connect('changed::left-placement', () => {
+            if (this._settings.get_string('panel-position') === 'left')
+                onPositionChange();
+        });
+    }
+
+    _addIndicator() {
+        const box = this._settings.get_string('panel-position');
+        let index;
+        if (box === 'left')
+            index = this._settings.get_string('left-placement') === 'before' ? 0 : 1;
+        else
+            index = 0;
         this._indicator = new WorkspaceIndicator(this._settings);
-        Main.panel.addToStatusArea('workspace-indicator', this._indicator, 1, 'left');
+        Main.panel.addToStatusArea('workspace-indicator', this._indicator, index, box);
+    }
+
+    _removeIndicator() {
+        this._indicator?.destroy();
+        this._indicator = null;
     }
 
     disable() {
-        this._indicator?.destroy();
-        this._indicator = null;
+        if (this._positionSignal) {
+            this._settings.disconnect(this._positionSignal);
+            this._positionSignal = null;
+        }
+        if (this._leftPlacementSignal) {
+            this._settings.disconnect(this._leftPlacementSignal);
+            this._leftPlacementSignal = null;
+        }
+        this._removeIndicator();
         this._settings = null;
     }
 }
