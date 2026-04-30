@@ -1,0 +1,7 @@
+{
+  "name": "Workspace Number Indicator",
+  "description": "Shows the current workspace number in the top panel.",
+  "uuid": "workspace-number-indicator@nielsonrolim.github.io",
+  "version": 1,
+  "shell-version": ["45", "46", "47", "48", "49", "50"]
+}

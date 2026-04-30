@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.workspace-number-indicator"
+          path="/org/gnome/shell/extensions/workspace-number-indicator/">
+    <key name="show-total" type="b">
+      <default>true</default>
+      <summary>Show total number of workspaces</summary>
+      <description>When enabled, displays the current workspace as "current / total" (e.g. 2 / 4). When disabled, shows only the current number (e.g. 2).</description>
+    </key>
+  </schema>
+</schemalist>
