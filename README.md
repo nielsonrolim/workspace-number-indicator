@@ -3,7 +3,7 @@
 ![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-45--50-blue)
 ![License](https://img.shields.io/badge/license-GPL--2.0-green)
 
-A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`) or current/total (`2 / 4`). Compatible with GNOME Shell 45–50.
+A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`) or current/total (`2 / 4`), and lets you place the indicator on the left or right side of the panel. Compatible with GNOME Shell 45–50.
 
 <!-- Add screenshot here -->
 
@@ -11,6 +11,8 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 
 - Displays current workspace number in the top panel
 - Optional `current / total` format (e.g. `2 / 4`) or just the current number (e.g. `2`)
+- Configurable panel position: left or right
+- When placed on the left, choose before or after the Activities button
 - Left-click the indicator to toggle the Overview
 
 ## Installation
@@ -42,6 +44,8 @@ gnome-extensions prefs workspace-number-indicator@nielsonrolim.github.io
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
 | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`) |
+| `panel-position` | string | `'left'` | Which side of the panel: `'left'` or `'right'` |
+| `left-placement` | string | `'after'` | When on the left: `'before'` or `'after'` the Activities button |
 
 ## Development
 
