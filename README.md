@@ -127,6 +127,23 @@ journalctl -f -o cat /usr/bin/gnome-shell
 glib-compile-schemas schemas/
 ```
 
+**Package and lint for extensions.gnome.org:**
+
+Install [shexli](https://pypi.org/project/shexli/) once in a virtual environment. shexli 0.2.1 crashes with tree-sitter 0.26, so pin it below that:
+```bash
+python -m venv venv
+venv/bin/pip install shexli 'tree-sitter<0.26'
+```
+
+Then pack the extension and lint the zip (`gnome-extensions pack` crashes if the output directory doesn't exist):
+```bash
+mkdir -p dist
+gnome-extensions pack --force --out-dir=dist .
+venv/bin/shexli dist/*.zip
+```
+
+shexli exits with 0 even when it finds issues, so read its output. It currently flags `shell-version` `"51"` as EGO-M-004, which is a false positive.
+
 ## License
 
 [GNU General Public License v2.0](LICENSE)
