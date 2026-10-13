@@ -87,6 +87,19 @@ export default class WorkspaceNumberExtension extends Extension {
             if (this._settings.get_string('panel-position') === 'left')
                 onPositionChange();
         });
+        this._updatePillsVisibility();
+        this._pillsSignal = this._settings.connect('changed::hide-workspace-pills',
+            () => this._updatePillsVisibility());
+    }
+
+    _updatePillsVisibility() {
+        this._setPillsHidden(this._settings.get_boolean('hide-workspace-pills'));
+    }
+
+    _setPillsHidden(hidden) {
+        const activities = Main.panel.statusArea.activities;
+        if (activities)
+            activities.container.visible = !hidden;
     }
 
     _addIndicator() {
@@ -120,6 +133,11 @@ export default class WorkspaceNumberExtension extends Extension {
             this._settings.disconnect(this._leftPlacementSignal);
             this._leftPlacementSignal = null;
         }
+        if (this._pillsSignal) {
+            this._settings.disconnect(this._pillsSignal);
+            this._pillsSignal = null;
+        }
+        this._setPillsHidden(false);
         this._removeIndicator();
         this._settings = null;
     }

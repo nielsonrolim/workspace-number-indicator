@@ -13,6 +13,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 - Optional `current / total` format (e.g. `2 / 4`) or just the current number (e.g. `2`)
 - Configurable panel position: left or right
 - When placed on the left, choose before or after the Activities button
+- Optionally hide the Activities button workspace pills
 - Left-click the indicator to toggle the Overview
 
 ## Installation
@@ -46,6 +47,7 @@ gnome-extensions prefs workspace-number-indicator@nielsonrolim.github.io
 | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`) |
 | `panel-position` | string | `'left'` | Which side of the panel: `'left'` or `'right'` |
 | `left-placement` | string | `'after'` | When on the left: `'before'` or `'after'` the Activities button |
+| `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
 
 ## Development
 

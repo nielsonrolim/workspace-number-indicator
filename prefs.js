@@ -28,6 +28,14 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
 
         settings.bind('show-total', row, 'active', Gio.SettingsBindFlags.DEFAULT);
 
+        const pillsRow = new Adw.SwitchRow({
+            title: 'Hide workspace pills',
+            subtitle: 'Hides the Activities button and its workspace pills from the top bar',
+        });
+        group.add(pillsRow);
+
+        settings.bind('hide-workspace-pills', pillsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+
         const positions = ['left', 'right'];
         const positionModel = new Gtk.StringList({ strings: ['Left', 'Right'] });
 
