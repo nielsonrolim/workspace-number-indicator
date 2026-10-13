@@ -23,7 +23,16 @@ class WorkspaceIndicator extends PanelMenu.Button {
             style: 'font-weight: bold; padding: 0 4px;',
         });
 
-        this.add_child(this._label);
+        this._list = new St.BoxLayout({
+            style_class: 'wni-workspace-list',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._workspaceSignals = [];
+
+        const box = new St.BoxLayout();
+        box.add_child(this._label);
+        box.add_child(this._list);
+        this.add_child(box);
         this._update();
 
         this.connect('button-press-event', (_actor, event) => {
@@ -46,6 +55,10 @@ class WorkspaceIndicator extends PanelMenu.Button {
             'changed::show-total',
             this._onUpdate
         );
+        this._styleSignal = this._settings.connect(
+            'changed::indicator-style',
+            this._onUpdate
+        );
 
         // Highlight like the Activities button while the Overview is open
         this._overviewShowingSignal = Main.overview.connect('showing',
@@ -57,6 +70,16 @@ class WorkspaceIndicator extends PanelMenu.Button {
     }
 
     _update() {
+        const isList = this._settings.get_string('indicator-style') === 'list';
+        this._label.visible = !isList;
+        this._list.visible = isList;
+
+        if (isList) {
+            this._updateList();
+            return;
+        }
+
+        this._clearList();
         const manager = global.workspace_manager;
         const current = manager.get_active_workspace_index() + 1;
 
@@ -68,7 +91,65 @@ class WorkspaceIndicator extends PanelMenu.Button {
         }
     }
 
+    _updateList() {
+        const manager = global.workspace_manager;
+        const total = manager.get_n_workspaces();
+        if (this._list.get_n_children() !== total)
+            this._buildList(total);
+
+        const active = manager.get_active_workspace_index();
+        this._list.get_children().forEach((item, i) => {
+            const occupied = manager.get_workspace_by_index(i).list_windows()
+                .some(w => !w.is_skip_taskbar() && !w.is_on_all_workspaces());
+            if (i === active)
+                item.add_style_class_name('wni-workspace-active');
+            else
+                item.remove_style_class_name('wni-workspace-active');
+            if (occupied)
+                item.add_style_class_name('wni-workspace-occupied');
+            else
+                item.remove_style_class_name('wni-workspace-occupied');
+        });
+    }
+
+    _buildList(total) {
+        this._clearList();
+        const manager = global.workspace_manager;
+
+        for (let i = 0; i < total; i++) {
+            const workspace = manager.get_workspace_by_index(i);
+            this._workspaceSignals.push(
+                [workspace, workspace.connect('window-added', this._onUpdate)],
+                [workspace, workspace.connect('window-removed', this._onUpdate)]
+            );
+
+            const item = new St.Label({
+                text: `${i + 1}`,
+                style_class: 'wni-workspace',
+                y_align: Clutter.ActorAlign.CENTER,
+                reactive: true,
+                track_hover: true,
+            });
+            // Stop the press here so the indicator doesn't toggle the Overview
+            item.connect('button-press-event', (_actor, event) => {
+                if (event.get_button() !== 1)
+                    return Clutter.EVENT_PROPAGATE;
+                workspace.activate(global.get_current_time());
+                return Clutter.EVENT_STOP;
+            });
+            this._list.add_child(item);
+        }
+    }
+
+    _clearList() {
+        for (const [workspace, id] of this._workspaceSignals)
+            workspace.disconnect(id);
+        this._workspaceSignals = [];
+        this._list.destroy_all_children();
+    }
+
     destroy() {
+        this._clearList();
         if (this._wsSignal) {
             global.workspace_manager.disconnect(this._wsSignal);
             this._wsSignal = null;
@@ -80,6 +161,10 @@ class WorkspaceIndicator extends PanelMenu.Button {
         if (this._settingsSignal) {
             this._settings.disconnect(this._settingsSignal);
             this._settingsSignal = null;
+        }
+        if (this._styleSignal) {
+            this._settings.disconnect(this._styleSignal);
+            this._styleSignal = null;
         }
         if (this._overviewShowingSignal) {
             Main.overview.disconnect(this._overviewShowingSignal);

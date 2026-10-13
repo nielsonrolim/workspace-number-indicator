@@ -11,6 +11,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 
 - Displays current workspace number in the top panel
 - Optional `current / total` format (e.g. `2 / 4`) or just the current number (e.g. `2`)
+- Optional list of all workspaces as clickable numbers, highlighting the active one and those with windows
 - Configurable panel position: left or right
 - When placed on the left, choose before or after the Activities button
 - Optionally hide the Activities button workspace pills
@@ -48,7 +49,8 @@ The options are in the **Display** and **Keyboard shortcuts** groups of the pref
 
 | Option | Key | Type | Default | Effect |
 |--------|-----|------|---------|--------|
-| Show total number of workspaces | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`) |
+| Indicator style | `indicator-style` | string | `'number'` | `'number'` → shows only the current workspace; `'list'` → shows every workspace as a number (click to switch), with the active one highlighted and those with windows in white |
+| Show total number of workspaces | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`). Disabled in the preferences window when the style is list |
 | Hide workspace pills | `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
 | Panel position | `panel-position` | string | `'left'` | Which side of the top bar: `'left'` or `'right'` |
 | Left side placement | `left-placement` | string | `'after'` | When the panel position is left: `'before'` or `'after'` the Activities button. Disabled in the preferences window when the position is right |
@@ -68,6 +70,7 @@ EXT=~/.local/share/gnome-shell/extensions/workspace-number-indicator@nielsonroli
 SCHEMA=org.gnome.shell.extensions.workspace-number-indicator
 
 gsettings --schemadir "$EXT/schemas" list-recursively "$SCHEMA"
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" indicator-style list
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" show-total false
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" hide-workspace-pills true
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" panel-position right

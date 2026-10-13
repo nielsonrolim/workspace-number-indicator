@@ -20,6 +20,23 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         });
         page.add(group);
 
+        const styles = ['number', 'list'];
+        const styleModel = new Gtk.StringList({ strings: ['Current number', 'All workspaces'] });
+
+        const styleRow = new Adw.ComboRow({
+            title: 'Indicator style',
+            subtitle: 'Show only the current workspace, or every workspace as a clickable number',
+            model: styleModel,
+        });
+        styleRow.selected = styles.indexOf(settings.get_string('indicator-style'));
+        styleRow.connect('notify::selected', () => {
+            settings.set_string('indicator-style', styles[styleRow.selected]);
+        });
+        const styleSignal = settings.connect('changed::indicator-style', () => {
+            styleRow.selected = styles.indexOf(settings.get_string('indicator-style'));
+        });
+        group.add(styleRow);
+
         const row = new Adw.SwitchRow({
             title: 'Show total number of workspaces',
             subtitle: 'Displays as "current / total" (e.g. 2 / 4) instead of just the number',
@@ -27,6 +44,12 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         group.add(row);
 
         settings.bind('show-total', row, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const updateTotalSensitivity = () => {
+            row.sensitive = settings.get_string('indicator-style') === 'number';
+        };
+        updateTotalSensitivity();
+        const totalSensitivitySignal = settings.connect('changed::indicator-style', updateTotalSensitivity);
 
         const pillsRow = new Adw.SwitchRow({
             title: 'Hide workspace pills',
@@ -98,6 +121,8 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         settings.bind('enable-move-shortcuts', moveRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         window.connect('close-request', () => {
+            settings.disconnect(styleSignal);
+            settings.disconnect(totalSensitivitySignal);
             settings.disconnect(positionSignal);
             settings.disconnect(placementSignal);
             settings.disconnect(sensitivitySignal);
