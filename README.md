@@ -15,6 +15,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 - When placed on the left, choose before or after the Activities button
 - Optionally hide the Activities button workspace pills
 - Left-click the indicator to toggle the Overview
+- The indicator is highlighted while the Overview is open, matching the Activities button pills
 
 ## Installation
 
