@@ -7,6 +7,7 @@ import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/
 export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        window.set_default_size(780, 720);
 
         const page = new Adw.PreferencesPage({
             title: 'General',

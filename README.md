@@ -3,7 +3,7 @@
 ![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-45--51-blue)
 ![License](https://img.shields.io/badge/license-GPL--2.0-green)
 
-A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`) or current/total (`2 / 4`), and lets you place the indicator on the left or right side of the panel. Compatible with GNOME Shell 45–51.
+A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`), current/total (`2 / 4`), or a clickable list of all workspaces (`1 2 [3] 4`), and lets you place the indicator on the left or right side of the panel. Compatible with GNOME Shell 45–51.
 
 <!-- Add screenshot here -->
 
@@ -16,7 +16,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 - When placed on the left, choose before or after the Activities button
 - Optionally hide the Activities button workspace pills
 - Optional keyboard shortcuts: `Super + 1 … 0` switches to workspace 1–10 and `Shift + Super + 1 … 0` moves the current window there
-- Left-click the indicator to toggle the Overview
+- Left-click the indicator to toggle the Overview (in the list style, clicking a number switches to that workspace instead)
 - The indicator is highlighted while the Overview is open, matching the Activities button pills
 
 ## Installation
@@ -110,6 +110,11 @@ killall -HUP gnome-shell
 **Reload after changes (Wayland — nested session):**
 ```bash
 dbus-run-session -- gnome-shell --nested --wayland
+```
+
+**Reload the preferences window after changes:** close it and stop the background process, which keeps the old `prefs.js` loaded:
+```bash
+pkill -f org.gnome.Shell.Extensions
 ```
 
 **View logs:**
