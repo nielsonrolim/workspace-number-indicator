@@ -10,6 +10,20 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
+// Resolves the workspace when called, so a removed one is never activated
+function switchToWorkspace(index) {
+    global.workspace_manager.get_workspace_by_index(index)
+        ?.activate(global.get_current_time());
+}
+
+// Window types whose sticky or skip-taskbar state can change occupancy
+const TRACKED_WINDOW_TYPES = [
+    Meta.WindowType.NORMAL,
+    Meta.WindowType.DIALOG,
+    Meta.WindowType.MODAL_DIALOG,
+    Meta.WindowType.UTILITY,
+];
+
 const WorkspaceIndicator = GObject.registerClass(
 class WorkspaceIndicator extends PanelMenu.Button {
     _init(settings) {
@@ -19,6 +33,7 @@ class WorkspaceIndicator extends PanelMenu.Button {
         this._onUpdate = this._update.bind(this);
         this._isList = false;
         this._windowSignals = new Map();
+        this._workspaceSignals = [];
         this._idleId = 0;
 
         this._label = new St.Label({
@@ -60,7 +75,7 @@ class WorkspaceIndicator extends PanelMenu.Button {
         );
         this._wsReorderedSignal = global.workspace_manager.connect(
             'workspaces-reordered',
-            () => this._rebuildList()
+            this._onUpdate
         );
         this._settingsSignal = this._settings.connect(
             'changed::show-total',
@@ -84,10 +99,14 @@ class WorkspaceIndicator extends PanelMenu.Button {
         const isList = this._settings.get_string('indicator-style') === 'list';
         if (isList !== this._isList) {
             this._isList = isList;
-            if (isList)
+            // Only the numbers are clickable in the list style, so the button doesn't hover
+            this.track_hover = !isList;
+            if (isList) {
+                this.hover = false;
                 this._startList();
-            else
+            } else {
                 this._stopList();
+            }
         }
         this._label.visible = !isList;
         this._list.visible = isList;
@@ -135,38 +154,49 @@ class WorkspaceIndicator extends PanelMenu.Button {
     }
 
     _startList() {
-        this._windowCreatedSignal = global.display.connect('window-created',
-            (_display, window) => {
-                this._trackWindow(window);
-                this._queueUpdate();
-            });
         for (const window of global.display.list_all_windows())
             this._trackWindow(window);
         this._buildList();
     }
 
     _stopList() {
-        if (this._windowCreatedSignal) {
-            global.display.disconnect(this._windowCreatedSignal);
-            this._windowCreatedSignal = null;
-        }
+        this._disconnectWorkspaces();
         for (const window of [...this._windowSignals.keys()])
             this._untrackWindow(window);
         this._list.destroy_all_children();
     }
 
+    _connectWorkspaces() {
+        const manager = global.workspace_manager;
+        for (let i = 0; i < manager.get_n_workspaces(); i++) {
+            const workspace = manager.get_workspace_by_index(i);
+            this._workspaceSignals.push(
+                [workspace, workspace.connect('window-added', (_ws, window) => {
+                    this._trackWindow(window);
+                    this._queueUpdate();
+                })],
+                [workspace, workspace.connect('window-removed', () => this._queueUpdate())]
+            );
+        }
+    }
+
+    _disconnectWorkspaces() {
+        for (const [workspace, id] of this._workspaceSignals)
+            workspace.disconnect(id);
+        this._workspaceSignals = [];
+    }
+
+    // Moves between workspaces arrive as window-added/removed; only sticky and
+    // skip-taskbar changes on regular windows need watching per window
     _trackWindow(window) {
-        if (this._windowSignals.has(window))
+        if (this._windowSignals.has(window) || window.is_override_redirect() ||
+            !TRACKED_WINDOW_TYPES.includes(window.get_window_type()))
             return;
         const queue = () => this._queueUpdate();
         this._windowSignals.set(window, [
-            window.connect('workspace-changed', queue),
             window.connect('notify::on-all-workspaces', queue),
             window.connect('notify::skip-taskbar', queue),
-            window.connect('unmanaged', () => {
-                this._untrackWindow(window);
-                this._queueUpdate();
-            }),
+            window.connect('unmanaged', () => this._untrackWindow(window)),
         ]);
     }
 
@@ -184,13 +214,9 @@ class WorkspaceIndicator extends PanelMenu.Button {
 
     _buildList() {
         this._list.destroy_all_children();
+        this._disconnectWorkspaces();
+        this._connectWorkspaces();
         const total = global.workspace_manager.get_n_workspaces();
-
-        // Resolve the workspace at click time so a removed one is never activated
-        const activate = index => {
-            global.workspace_manager.get_workspace_by_index(index)
-                ?.activate(global.get_current_time());
-        };
 
         for (let i = 0; i < total; i++) {
             const item = new St.Label({
@@ -201,14 +227,14 @@ class WorkspaceIndicator extends PanelMenu.Button {
                 track_hover: true,
             });
             item.connect('button-press-event', (_actor, event) => {
-                if (event.get_button() !== 1)
+                if (event.get_button() !== Clutter.BUTTON_PRIMARY)
                     return Clutter.EVENT_PROPAGATE;
-                activate(i);
+                switchToWorkspace(i);
                 return Clutter.EVENT_STOP;
             });
             item.connect('touch-event', (_actor, event) => {
                 if (event.type() === Clutter.EventType.TOUCH_BEGIN)
-                    activate(i);
+                    switchToWorkspace(i);
                 return Clutter.EVENT_STOP;
             });
             this._list.add_child(item);
@@ -287,7 +313,7 @@ class WorkspaceKeybindings {
         this._groups = {
             'shortcut-switch-to-workspace': {
                 setting: 'enable-switch-shortcuts',
-                handler: index => this._switchTo(index),
+                handler: index => switchToWorkspace(index),
             },
             'shortcut-move-to-workspace': {
                 setting: 'enable-move-shortcuts',
@@ -326,11 +352,6 @@ class WorkspaceKeybindings {
                 this._releaseConflicts(name);
             }
         }
-    }
-
-    _switchTo(index) {
-        const workspace = global.workspace_manager.get_workspace_by_index(index);
-        workspace?.activate(global.get_current_time());
     }
 
     _moveTo(index) {

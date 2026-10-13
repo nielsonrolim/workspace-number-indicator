@@ -11,7 +11,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 
 - Displays current workspace number in the top panel
 - Optional `current / total` format (e.g. `2 / 4`) or just the current number (e.g. `2`)
-- Optional list of all workspaces as clickable numbers, highlighting the active one and those with windows
+- Optional list of all workspaces as clickable numbers, highlighting the active one and dimming the empty ones
 - Configurable panel position: left or right
 - When placed on the left, choose before or after the Activities button
 - Optionally hide the Activities button workspace pills

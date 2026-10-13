@@ -29,9 +29,11 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
             subtitle: 'Show only the current workspace, or every workspace as a clickable number',
             model: styleModel,
         });
+        // Only write real changes, so syncing the row doesn't write the setting back
         styleRow.connect('notify::selected', () => {
-            if (styleRow.selected !== Gtk.INVALID_LIST_POSITION)
-                settings.set_string('indicator-style', styles[styleRow.selected]);
+            const style = styles[styleRow.selected];
+            if (style && style !== settings.get_string('indicator-style'))
+                settings.set_string('indicator-style', style);
         });
 
         const row = new Adw.SwitchRow({
@@ -43,7 +45,9 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
 
         const syncStyle = () => {
             const style = settings.get_string('indicator-style');
-            styleRow.selected = Math.max(styles.indexOf(style), 0);
+            const selected = Math.max(styles.indexOf(style), 0);
+            if (styleRow.selected !== selected)
+                styleRow.selected = selected;
             row.sensitive = style === 'number';
         };
         syncStyle();

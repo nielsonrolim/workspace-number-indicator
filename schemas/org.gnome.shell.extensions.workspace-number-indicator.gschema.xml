@@ -9,7 +9,7 @@
       </choices>
       <default>'number'</default>
       <summary>Indicator style</summary>
-      <description>"number" shows only the current workspace; "list" shows every workspace as a clickable number, highlighting the active one and those with windows.</description>
+      <description>"number" shows only the current workspace; "list" shows every workspace as a clickable number, highlighting the active one and dimming the empty ones.</description>
     </key>
     <key name="show-total" type="b">
       <default>true</default>
