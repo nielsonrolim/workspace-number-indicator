@@ -77,6 +77,26 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
 
         group.add(leftPlacementRow);
 
+        const shortcutsGroup = new Adw.PreferencesGroup({
+            title: 'Keyboard shortcuts',
+            description: 'Conflicting system shortcuts are disabled while these are on and restored afterwards.',
+        });
+        page.add(shortcutsGroup);
+
+        const switchRow = new Adw.SwitchRow({
+            title: 'Switch to workspace',
+            subtitle: 'Super + 1 … 0',
+        });
+        shortcutsGroup.add(switchRow);
+        settings.bind('enable-switch-shortcuts', switchRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        const moveRow = new Adw.SwitchRow({
+            title: 'Move to workspace',
+            subtitle: 'Shift + Super + 1 … 0, with the current window',
+        });
+        shortcutsGroup.add(moveRow);
+        settings.bind('enable-move-shortcuts', moveRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+
         window.connect('close-request', () => {
             settings.disconnect(positionSignal);
             settings.disconnect(placementSignal);

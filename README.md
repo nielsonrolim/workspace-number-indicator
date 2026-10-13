@@ -14,6 +14,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 - Configurable panel position: left or right
 - When placed on the left, choose before or after the Activities button
 - Optionally hide the Activities button workspace pills
+- Optional keyboard shortcuts: `Super + 1 … 0` switches to workspace 1–10 and `Shift + Super + 1 … 0` moves the current window there
 - Left-click the indicator to toggle the Overview
 - The indicator is highlighted while the Overview is open, matching the Activities button pills
 
@@ -43,7 +44,7 @@ Open the preferences window with:
 gnome-extensions prefs workspace-number-indicator@nielsonrolim.github.io
 ```
 
-All options are in the **Display** group of the preferences window:
+The options are in the **Display** and **Keyboard shortcuts** groups of the preferences window:
 
 | Option | Key | Type | Default | Effect |
 |--------|-----|------|---------|--------|
@@ -51,8 +52,12 @@ All options are in the **Display** group of the preferences window:
 | Hide workspace pills | `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
 | Panel position | `panel-position` | string | `'left'` | Which side of the top bar: `'left'` or `'right'` |
 | Left side placement | `left-placement` | string | `'after'` | When the panel position is left: `'before'` or `'after'` the Activities button. Disabled in the preferences window when the position is right |
+| Switch to workspace | `enable-switch-shortcuts` | boolean | `false` | `true` → `Super + 1 … 0` switches to workspace 1–10 |
+| Move to workspace | `enable-move-shortcuts` | boolean | `false` | `true` → `Shift + Super + 1 … 0` moves the focused window to workspace 1–10 and follows it |
 
 All changes apply immediately, without reloading GNOME Shell.
+
+The **Switch to workspace** and **Move to workspace** options are in the **Keyboard shortcuts** group. While they are on, any system shortcut using the same keys (for example GNOME's `Super + 1…9` "switch to application" shortcuts) is disabled and then restored when the option is turned off or the extension is disabled. Don't enable equivalent shortcuts in another extension (such as Space Bar) at the same time, since both would grab the same keys.
 
 ### Command line
 
@@ -67,6 +72,8 @@ gsettings --schemadir "$EXT/schemas" set "$SCHEMA" show-total false
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" hide-workspace-pills true
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" panel-position right
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" left-placement before
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" enable-switch-shortcuts true
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" enable-move-shortcuts true
 ```
 
 ## Development

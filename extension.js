@@ -1,6 +1,9 @@
 import St from 'gi://St';
 import GObject from 'gi://GObject';
 import Clutter from 'gi://Clutter';
+import Gio from 'gi://Gio';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
 
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -90,6 +93,184 @@ class WorkspaceIndicator extends PanelMenu.Button {
     }
 });
 
+const SHORTCUT_COUNT = 10;
+
+// System schemas scanned for keybindings that clash with the extension shortcuts
+const SYSTEM_KEYBINDING_SCHEMAS = [
+    'org.gnome.desktop.wm.keybindings',
+    'org.gnome.shell.keybindings',
+    'org.gnome.settings-daemon.plugins.media-keys',
+];
+
+// Creating Gio.Settings for a schema that isn't installed aborts the process
+function lookupSettings(schemaId) {
+    const schema = Gio.SettingsSchemaSource.get_default()?.lookup(schemaId, true);
+    return schema ? new Gio.Settings({settings_schema: schema}) : null;
+}
+
+function normalizeAccelerator(accel) {
+    const mods = (accel.match(/<[^>]+>/g) ?? [])
+        .map(m => m.toLowerCase().replace('<primary>', '<control>'))
+        .sort();
+    return mods.join('') + accel.replace(/<[^>]+>/g, '').toLowerCase();
+}
+
+class WorkspaceKeybindings {
+    constructor(settings) {
+        this._settings = settings;
+        this._added = new Set();
+
+        // Restore anything left over from a session that ended without cleanup
+        this._restoreAll();
+
+        // Names must not clash with Mutter's built-in keybindings (e.g. switch-to-workspace-1)
+        this._groups = {
+            'shortcut-switch-to-workspace': {
+                setting: 'enable-switch-shortcuts',
+                handler: index => this._switchTo(index),
+            },
+            'shortcut-move-to-workspace': {
+                setting: 'enable-move-shortcuts',
+                handler: index => this._moveTo(index),
+            },
+        };
+
+        this._signals = Object.entries(this._groups).map(([prefix, group]) => {
+            this._apply(prefix);
+            return this._settings.connect(`changed::${group.setting}`, () => this._apply(prefix));
+        });
+    }
+
+    _apply(prefix) {
+        const {setting, handler} = this._groups[prefix];
+        const enabled = this._settings.get_boolean(setting);
+
+        for (let i = 0; i < SHORTCUT_COUNT; i++) {
+            const name = `${prefix}-${i + 1}`;
+            if (enabled && !this._added.has(name)) {
+                for (const accel of this._settings.get_strv(name))
+                    this._replaceConflicts(name, accel);
+                const action = Main.wm.addKeybinding(name, this._settings,
+                    Meta.KeyBindingFlags.NONE,
+                    Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
+                    () => handler(i));
+                if (action === Meta.KeyBindingAction.NONE) {
+                    console.warn(`Workspace Number Indicator: could not add keybinding ${name}`);
+                    this._releaseConflicts(name);
+                    continue;
+                }
+                this._added.add(name);
+            } else if (!enabled && this._added.has(name)) {
+                Main.wm.removeKeybinding(name);
+                this._added.delete(name);
+                this._releaseConflicts(name);
+            }
+        }
+    }
+
+    _switchTo(index) {
+        const workspace = global.workspace_manager.get_workspace_by_index(index);
+        workspace?.activate(global.get_current_time());
+    }
+
+    _moveTo(index) {
+        const workspace = global.workspace_manager.get_workspace_by_index(index);
+        const window = global.display.get_focus_window();
+        if (!workspace || !window || window.is_on_all_workspaces())
+            return;
+        window.change_workspace(workspace);
+        workspace.activate_with_focus(window, global.get_current_time());
+    }
+
+    // Backup format: {"<schema> <key>": {value, wasDefault, owners: [names]}}
+    _loadBackup() {
+        try {
+            return JSON.parse(this._settings.get_string('replaced-system-keybindings'));
+        } catch {
+            return {};
+        }
+    }
+
+    _saveBackup(backup) {
+        this._settings.set_string('replaced-system-keybindings', JSON.stringify(backup));
+    }
+
+    _replaceConflicts(owner, accel) {
+        const target = normalizeAccelerator(accel);
+        const backup = this._loadBackup();
+
+        for (const schema of SYSTEM_KEYBINDING_SCHEMAS) {
+            const settings = lookupSettings(schema);
+            if (!settings)
+                continue;
+            for (const key of settings.settings_schema.list_keys()) {
+                const variant = settings.get_value(key);
+                if (variant.get_type_string() !== 'as')
+                    continue;
+                const value = variant.deepUnpack();
+                const kept = value.filter(v => normalizeAccelerator(v) !== target);
+                if (kept.length === value.length)
+                    continue;
+
+                const id = `${schema} ${key}`;
+                backup[id] ??= {
+                    value,
+                    wasDefault: settings.get_user_value(key) === null,
+                    owners: [],
+                };
+                if (!backup[id].owners.includes(owner))
+                    backup[id].owners.push(owner);
+                settings.set_strv(key, kept);
+            }
+        }
+
+        this._saveBackup(backup);
+    }
+
+    _releaseConflicts(owner) {
+        const backup = this._loadBackup();
+        for (const [id, entry] of Object.entries(backup)) {
+            entry.owners = entry.owners.filter(o => o !== owner);
+            if (entry.owners.length === 0) {
+                this._restoreEntry(id, entry);
+                delete backup[id];
+            }
+        }
+        this._saveBackup(backup);
+    }
+
+    _restoreAll() {
+        for (const [id, entry] of Object.entries(this._loadBackup()))
+            this._restoreEntry(id, entry);
+        this._saveBackup({});
+    }
+
+    _restoreEntry(id, entry) {
+        const [schema, key] = id.split(' ');
+        try {
+            const settings = lookupSettings(schema);
+            if (!settings)
+                return;
+            if (entry.wasDefault)
+                settings.reset(key);
+            else
+                settings.set_strv(key, entry.value);
+        } catch (e) {
+            console.warn(`Workspace Number Indicator: could not restore ${id}: ${e.message}`);
+        }
+    }
+
+    destroy() {
+        for (const id of this._signals)
+            this._settings.disconnect(id);
+        this._signals = [];
+        for (const name of this._added)
+            Main.wm.removeKeybinding(name);
+        this._added.clear();
+        this._restoreAll();
+    }
+}
+
 export default class WorkspaceNumberExtension extends Extension {
     enable() {
         this._settings = this.getSettings('org.gnome.shell.extensions.workspace-number-indicator');
@@ -106,6 +287,7 @@ export default class WorkspaceNumberExtension extends Extension {
         this._updatePillsVisibility();
         this._pillsSignal = this._settings.connect('changed::hide-workspace-pills',
             () => this._updatePillsVisibility());
+        this._keybindings = new WorkspaceKeybindings(this._settings);
     }
 
     _updatePillsVisibility() {
@@ -153,6 +335,8 @@ export default class WorkspaceNumberExtension extends Extension {
             this._settings.disconnect(this._pillsSignal);
             this._pillsSignal = null;
         }
+        this._keybindings?.destroy();
+        this._keybindings = null;
         this._setPillsHidden(false);
         this._removeIndicator();
         this._settings = null;
