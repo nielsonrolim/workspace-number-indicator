@@ -1,9 +1,9 @@
 # Workspace Number Indicator
 
-![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-45--50-blue)
+![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-45--51-blue)
 ![License](https://img.shields.io/badge/license-GPL--2.0-green)
 
-A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`) or current/total (`2 / 4`), and lets you place the indicator on the left or right side of the panel. Compatible with GNOME Shell 45–50.
+A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`) or current/total (`2 / 4`), and lets you place the indicator on the left or right side of the panel. Compatible with GNOME Shell 45–51.
 
 <!-- Add screenshot here -->
 
