@@ -33,13 +33,11 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
             if (styleRow.selected !== Gtk.INVALID_LIST_POSITION)
                 settings.set_string('indicator-style', styles[styleRow.selected]);
         });
-        group.add(styleRow);
 
         const row = new Adw.SwitchRow({
             title: 'Show total number of workspaces',
             subtitle: 'Displays as "current / total" (e.g. 2 / 4) instead of just the number',
         });
-        group.add(row);
 
         settings.bind('show-total', row, 'active', Gio.SettingsBindFlags.DEFAULT);
 
@@ -55,7 +53,6 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
             title: 'Hide workspace pills',
             subtitle: 'Hides the Activities button and its workspace pills from the top bar',
         });
-        group.add(pillsRow);
 
         settings.bind('hide-workspace-pills', pillsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
@@ -74,7 +71,6 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         const positionSignal = settings.connect('changed::panel-position', () => {
             posRow.selected = positions.indexOf(settings.get_string('panel-position'));
         });
-        group.add(posRow);
 
         const placements = ['before', 'after'];
         const placementModel = new Gtk.StringList({ strings: ['Before Activities button', 'After Activities button'] });
@@ -101,7 +97,8 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         const sensitivitySignal = settings.connect('changed::panel-position', updateSensitivity);
         const pillsSensitivitySignal = settings.connect('changed::hide-workspace-pills', updateSensitivity);
 
-        group.add(leftPlacementRow);
+        for (const r of [styleRow, posRow, pillsRow, leftPlacementRow, row])
+            group.add(r);
 
         const shortcutsGroup = new Adw.PreferencesGroup({
             title: 'Keyboard shortcuts',
