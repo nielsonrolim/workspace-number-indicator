@@ -16,7 +16,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 - When placed on the left, choose before or after the Activities button
 - Optionally hide the Activities button workspace pills
 - Optional keyboard shortcuts: `Super + 1 … 0` switches to workspace 1–10 and `Shift + Super + 1 … 0` moves the current window there
-- Left-click the indicator to toggle the Overview (in the list style, clicking or tapping a number switches to that workspace instead)
+- Left- or right-click the indicator to toggle the Overview (in the list style, left-clicking or tapping a number switches to that workspace, and right-click toggles the Overview)
 - The indicator is highlighted while the Overview is open, matching the Activities button pills
 
 ## Installation

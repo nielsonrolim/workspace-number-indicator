@@ -38,9 +38,12 @@ class WorkspaceIndicator extends PanelMenu.Button {
         this.add_child(box);
         this._update();
 
-        // In the list style the numbers handle clicks, so the Overview toggle is off
+        // Right-click always toggles the Overview; left-click only outside the list
+        // style, where the numbers handle it
         this.connect('button-press-event', (_actor, event) => {
-            if (event.get_button() === 1 && !this._isList) {
+            const button = event.get_button();
+            if (button === Clutter.BUTTON_SECONDARY ||
+                (button === Clutter.BUTTON_PRIMARY && !this._isList)) {
                 Main.overview.toggle();
                 return Clutter.EVENT_STOP;
             }
