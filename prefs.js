@@ -21,87 +21,71 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         });
         page.add(group);
 
-        const styles = ['number', 'list'];
-        const styleModel = new Gtk.StringList({ strings: ['Current number', 'All workspaces'] });
+        const signals = [];
+
+        // Keeps a combo row and a string setting in sync. Only real changes are
+        // written, so syncing the row never writes the setting back
+        const bindComboRow = (row, key, values, onChange = () => {}) => {
+            row.connect('notify::selected', () => {
+                const value = values[row.selected];
+                if (value !== undefined && value !== settings.get_string(key))
+                    settings.set_string(key, value);
+            });
+            const sync = () => {
+                const selected = Math.max(values.indexOf(settings.get_string(key)), 0);
+                if (row.selected !== selected)
+                    row.selected = selected;
+                onChange();
+            };
+            sync();
+            signals.push(settings.connect(`changed::${key}`, sync));
+        };
 
         const styleRow = new Adw.ComboRow({
             title: 'Indicator style',
             subtitle: 'Show only the current workspace, or every workspace as a clickable number',
-            model: styleModel,
-        });
-        // Only write real changes, so syncing the row doesn't write the setting back
-        styleRow.connect('notify::selected', () => {
-            const style = styles[styleRow.selected];
-            if (style && style !== settings.get_string('indicator-style'))
-                settings.set_string('indicator-style', style);
+            model: new Gtk.StringList({ strings: ['Current number', 'All workspaces'] }),
         });
 
-        const row = new Adw.SwitchRow({
+        const totalRow = new Adw.SwitchRow({
             title: 'Show total number of workspaces',
             subtitle: 'Displays as "current / total" (e.g. 2 / 4) instead of just the number',
         });
+        settings.bind('show-total', totalRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        settings.bind('show-total', row, 'active', Gio.SettingsBindFlags.DEFAULT);
+        bindComboRow(styleRow, 'indicator-style', ['number', 'list'], () => {
+            totalRow.sensitive = settings.get_string('indicator-style') === 'number';
+        });
 
-        const syncStyle = () => {
-            const style = settings.get_string('indicator-style');
-            const selected = Math.max(styles.indexOf(style), 0);
-            if (styleRow.selected !== selected)
-                styleRow.selected = selected;
-            row.sensitive = style === 'number';
-        };
-        syncStyle();
-        const styleSignal = settings.connect('changed::indicator-style', syncStyle);
+        const posRow = new Adw.ComboRow({
+            title: 'Panel position',
+            subtitle: 'Where to place the indicator in the top bar',
+            model: new Gtk.StringList({ strings: ['Left', 'Right'] }),
+        });
 
         const pillsRow = new Adw.SwitchRow({
             title: 'Hide workspace pills',
             subtitle: 'Hides the Activities button and its workspace pills from the top bar',
         });
-
         settings.bind('hide-workspace-pills', pillsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-
-        const positions = ['left', 'right'];
-        const positionModel = new Gtk.StringList({ strings: ['Left', 'Right'] });
-
-        const posRow = new Adw.ComboRow({
-            title: 'Panel position',
-            subtitle: 'Where to place the indicator in the top bar',
-            model: positionModel,
-        });
-        posRow.selected = positions.indexOf(settings.get_string('panel-position'));
-        posRow.connect('notify::selected', () => {
-            settings.set_string('panel-position', positions[posRow.selected]);
-        });
-        const positionSignal = settings.connect('changed::panel-position', () => {
-            posRow.selected = positions.indexOf(settings.get_string('panel-position'));
-        });
-
-        const placements = ['before', 'after'];
-        const placementModel = new Gtk.StringList({ strings: ['Before Activities button', 'After Activities button'] });
 
         const leftPlacementRow = new Adw.ComboRow({
             title: 'Left side placement',
             subtitle: 'Position relative to the Activities button',
-            model: placementModel,
+            model: new Gtk.StringList({ strings: ['Before Activities button', 'After Activities button'] }),
         });
-        leftPlacementRow.selected = placements.indexOf(settings.get_string('left-placement'));
-        leftPlacementRow.connect('notify::selected', () => {
-            settings.set_string('left-placement', placements[leftPlacementRow.selected]);
-        });
-        const placementSignal = settings.connect('changed::left-placement', () => {
-            leftPlacementRow.selected = placements.indexOf(settings.get_string('left-placement'));
-        });
+        bindComboRow(leftPlacementRow, 'left-placement', ['before', 'after']);
 
         // Placement only matters on the left, next to a visible Activities button
-        const updateSensitivity = () => {
+        const updatePlacementSensitivity = () => {
             leftPlacementRow.sensitive = settings.get_string('panel-position') === 'left' &&
                 !settings.get_boolean('hide-workspace-pills');
         };
-        updateSensitivity();
-        const sensitivitySignal = settings.connect('changed::panel-position', updateSensitivity);
-        const pillsSensitivitySignal = settings.connect('changed::hide-workspace-pills', updateSensitivity);
+        bindComboRow(posRow, 'panel-position', ['left', 'right'], updatePlacementSensitivity);
+        signals.push(settings.connect('changed::hide-workspace-pills', updatePlacementSensitivity));
 
-        for (const r of [styleRow, posRow, pillsRow, leftPlacementRow, row])
+        // Each dependent row sits right under the row that controls it
+        for (const r of [styleRow, totalRow, posRow, pillsRow, leftPlacementRow])
             group.add(r);
 
         const shortcutsGroup = new Adw.PreferencesGroup({
@@ -125,11 +109,8 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         settings.bind('enable-move-shortcuts', moveRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         window.connect('close-request', () => {
-            settings.disconnect(styleSignal);
-            settings.disconnect(positionSignal);
-            settings.disconnect(placementSignal);
-            settings.disconnect(sensitivitySignal);
-            settings.disconnect(pillsSensitivitySignal);
+            for (const id of signals)
+                settings.disconnect(id);
             return false;
         });
     }

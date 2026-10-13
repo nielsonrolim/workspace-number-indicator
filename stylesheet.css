@@ -9,9 +9,10 @@
     font-weight: bold;
 }
 
-/* Neutral grey reads on both dark and light panels */
+/* Neutral greys read on both dark and light panels; hover sits between
+   no background and the active one */
 .wni-workspace:hover {
-    background-color: rgba(128, 128, 128, 0.2);
+    background-color: rgba(160, 160, 160, 0.25);
 }
 
 .wni-workspace-active,

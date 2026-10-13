@@ -50,10 +50,10 @@ The options are in the **Display** and **Keyboard shortcuts** groups of the pref
 | Option | Key | Type | Default | Effect |
 |--------|-----|------|---------|--------|
 | Indicator style | `indicator-style` | string | `'number'` | `'number'` → shows only the current workspace; `'list'` → shows every workspace as a number (click to switch), with the active one highlighted and empty ones dimmed |
+| Show total number of workspaces | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`). Disabled in the preferences window when the style is list |
 | Panel position | `panel-position` | string | `'left'` | Which side of the top bar: `'left'` or `'right'` |
 | Hide workspace pills | `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
 | Left side placement | `left-placement` | string | `'after'` | When the panel position is left: `'before'` or `'after'` the Activities button. Disabled in the preferences window when the position is right or the workspace pills are hidden |
-| Show total number of workspaces | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`). Disabled in the preferences window when the style is list |
 | Switch to workspace | `enable-switch-shortcuts` | boolean | `false` | `true` → `Super + 1 … 0` switches to workspace 1–10 |
 | Move to workspace | `enable-move-shortcuts` | boolean | `false` | `true` → `Shift + Super + 1 … 0` moves the focused window to workspace 1–10 and follows it |
 

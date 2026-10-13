@@ -16,13 +16,18 @@ function switchToWorkspace(index) {
         ?.activate(global.get_current_time());
 }
 
-// Window types whose sticky or skip-taskbar state can change occupancy
-const TRACKED_WINDOW_TYPES = [
+const REGULAR_WINDOW_TYPES = [
     Meta.WindowType.NORMAL,
     Meta.WindowType.DIALOG,
     Meta.WindowType.MODAL_DIALOG,
     Meta.WindowType.UTILITY,
 ];
+
+// Only regular windows count towards occupancy, so menus, popups and tooltips are ignored
+function isRegularWindow(window) {
+    return !window.is_override_redirect() &&
+        REGULAR_WINDOW_TYPES.includes(window.get_window_type());
+}
 
 const WorkspaceIndicator = GObject.registerClass(
 class WorkspaceIndicator extends PanelMenu.Button {
@@ -106,6 +111,7 @@ class WorkspaceIndicator extends PanelMenu.Button {
                 this._startList();
             } else {
                 this._stopList();
+                this.sync_hover();
             }
         }
         this._label.visible = !isList;
@@ -143,13 +149,14 @@ class WorkspaceIndicator extends PanelMenu.Button {
         const active = manager.get_active_workspace_index();
         this._list.get_children().forEach((item, i) => {
             const occupied = manager.get_workspace_by_index(i)?.list_windows()
-                .some(w => !w.is_skip_taskbar() && !w.is_on_all_workspaces());
+                .some(w => isRegularWindow(w) && !w.is_skip_taskbar() && !w.is_on_all_workspaces());
             if (i === active)
                 item.add_style_class_name('wni-workspace-active');
             else
                 item.remove_style_class_name('wni-workspace-active');
-            // Empty workspaces are dimmed, keeping the panel's own text colour
-            item.opacity = occupied || i === active ? 255 : 128;
+            // Empty workspaces are dimmed, keeping the panel's own text colour.
+            // Hovering undims them, so the hover background isn't dimmed too
+            item.opacity = occupied || i === active || item.hover ? 255 : 128;
         });
     }
 
@@ -186,16 +193,13 @@ class WorkspaceIndicator extends PanelMenu.Button {
         this._workspaceSignals = [];
     }
 
-    // Moves between workspaces arrive as window-added/removed; only sticky and
-    // skip-taskbar changes on regular windows need watching per window
+    // Moves and sticky changes arrive as window-added/removed on the workspaces;
+    // only skip-taskbar changes on regular windows need watching per window
     _trackWindow(window) {
-        if (this._windowSignals.has(window) || window.is_override_redirect() ||
-            !TRACKED_WINDOW_TYPES.includes(window.get_window_type()))
+        if (this._windowSignals.has(window) || !isRegularWindow(window))
             return;
-        const queue = () => this._queueUpdate();
         this._windowSignals.set(window, [
-            window.connect('notify::on-all-workspaces', queue),
-            window.connect('notify::skip-taskbar', queue),
+            window.connect('notify::skip-taskbar', () => this._queueUpdate()),
             window.connect('unmanaged', () => this._untrackWindow(window)),
         ]);
     }
@@ -226,6 +230,7 @@ class WorkspaceIndicator extends PanelMenu.Button {
                 reactive: true,
                 track_hover: true,
             });
+            item.connect('notify::hover', () => this._updateList());
             item.connect('button-press-event', (_actor, event) => {
                 if (event.get_button() !== Clutter.BUTTON_PRIMARY)
                     return Clutter.EVENT_PROPAGATE;
@@ -313,7 +318,7 @@ class WorkspaceKeybindings {
         this._groups = {
             'shortcut-switch-to-workspace': {
                 setting: 'enable-switch-shortcuts',
-                handler: index => switchToWorkspace(index),
+                handler: switchToWorkspace,
             },
             'shortcut-move-to-workspace': {
                 setting: 'enable-move-shortcuts',
