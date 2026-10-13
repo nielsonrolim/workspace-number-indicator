@@ -1,6 +1,6 @@
 {
   "name": "Workspace Number Indicator",
-  "description": "Shows the current workspace number in the top panel, as just the number (2) or current / total (2 / 4). Click it to toggle the Overview.\n\nOptions:\n- Place the indicator on the left or right of the top bar, before or after the Activities button\n- Hide the Activities button workspace pills\n- Keyboard shortcuts: Super+1…0 switches to workspace 1–10 and Shift+Super+1…0 moves the focused window there",
+  "description": "Shows the current workspace number in the top panel, as just the number (2) or current / total (2 / 4). Click or right-click it to toggle the Overview.\n\nIt can also show every workspace as a clickable number, with the active one highlighted and empty ones dimmed. Click a number to switch to that workspace; right-click still toggles the Overview.\n\nOptions:\n- Place the indicator on the left or right of the top bar, before or after the Activities button\n- Hide the Activities button workspace pills\n- Keyboard shortcuts: Super+1…0 switches to workspace 1–10 and Shift+Super+1…0 moves the focused window there",
   "uuid": "workspace-number-indicator@nielsonrolim.github.io",
   "url": "https://github.com/nielsonrolim/workspace-number-indicator",
   "settings-schema": "org.gnome.shell.extensions.workspace-number-indicator",

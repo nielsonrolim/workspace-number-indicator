@@ -2,12 +2,32 @@ import St from 'gi://St';
 import GObject from 'gi://GObject';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+
+// Resolves the workspace when called, so a removed one is never activated
+function switchToWorkspace(index) {
+    global.workspace_manager.get_workspace_by_index(index)
+        ?.activate(global.get_current_time());
+}
+
+const REGULAR_WINDOW_TYPES = [
+    Meta.WindowType.NORMAL,
+    Meta.WindowType.DIALOG,
+    Meta.WindowType.MODAL_DIALOG,
+    Meta.WindowType.UTILITY,
+];
+
+// Only regular windows count towards occupancy, so menus, popups and tooltips are ignored
+function isRegularWindow(window) {
+    return !window.is_override_redirect() &&
+        REGULAR_WINDOW_TYPES.includes(window.get_window_type());
+}
 
 const WorkspaceIndicator = GObject.registerClass(
 class WorkspaceIndicator extends PanelMenu.Button {
@@ -16,6 +36,10 @@ class WorkspaceIndicator extends PanelMenu.Button {
 
         this._settings = settings;
         this._onUpdate = this._update.bind(this);
+        this._isList = false;
+        this._windowSignals = new Map();
+        this._workspaceSignals = [];
+        this._idleId = 0;
 
         this._label = new St.Label({
             text: '',
@@ -23,11 +47,23 @@ class WorkspaceIndicator extends PanelMenu.Button {
             style: 'font-weight: bold; padding: 0 4px;',
         });
 
-        this.add_child(this._label);
+        this._list = new St.BoxLayout({
+            style_class: 'wni-workspace-list',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const box = new St.BoxLayout();
+        box.add_child(this._label);
+        box.add_child(this._list);
+        this.add_child(box);
         this._update();
 
+        // Right-click always toggles the Overview; left-click only outside the list
+        // style, where the numbers handle it
         this.connect('button-press-event', (_actor, event) => {
-            if (event.get_button() === 1) {
+            const button = event.get_button();
+            if (button === Clutter.BUTTON_SECONDARY ||
+                (button === Clutter.BUTTON_PRIMARY && !this._isList)) {
                 Main.overview.toggle();
                 return Clutter.EVENT_STOP;
             }
@@ -40,10 +76,18 @@ class WorkspaceIndicator extends PanelMenu.Button {
         );
         this._wsCountSignal = global.workspace_manager.connect(
             'notify::n-workspaces',
+            () => this._rebuildList()
+        );
+        this._wsReorderedSignal = global.workspace_manager.connect(
+            'workspaces-reordered',
             this._onUpdate
         );
         this._settingsSignal = this._settings.connect(
             'changed::show-total',
+            this._onUpdate
+        );
+        this._styleSignal = this._settings.connect(
+            'changed::indicator-style',
             this._onUpdate
         );
 
@@ -57,6 +101,27 @@ class WorkspaceIndicator extends PanelMenu.Button {
     }
 
     _update() {
+        const isList = this._settings.get_string('indicator-style') === 'list';
+        if (isList !== this._isList) {
+            this._isList = isList;
+            // Only the numbers are clickable in the list style, so the button doesn't hover
+            this.track_hover = !isList;
+            if (isList) {
+                this.hover = false;
+                this._startList();
+            } else {
+                this._stopList();
+                this.sync_hover();
+            }
+        }
+        this._label.visible = !isList;
+        this._list.visible = isList;
+
+        if (isList) {
+            this._updateList();
+            return;
+        }
+
         const manager = global.workspace_manager;
         const current = manager.get_active_workspace_index() + 1;
 
@@ -68,7 +133,124 @@ class WorkspaceIndicator extends PanelMenu.Button {
         }
     }
 
+    // Coalesce bursts of window changes into a single refresh
+    _queueUpdate() {
+        if (this._idleId)
+            return;
+        this._idleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._idleId = 0;
+            this._update();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _updateList() {
+        const manager = global.workspace_manager;
+        const active = manager.get_active_workspace_index();
+        this._list.get_children().forEach((item, i) => {
+            const occupied = manager.get_workspace_by_index(i)?.list_windows()
+                .some(w => isRegularWindow(w) && !w.is_skip_taskbar() && !w.is_on_all_workspaces());
+            if (i === active)
+                item.add_style_class_name('wni-workspace-active');
+            else
+                item.remove_style_class_name('wni-workspace-active');
+            // Empty workspaces are dimmed, keeping the panel's own text colour.
+            // Only the label is dimmed, so the hover background stays visible
+            item.child.opacity = occupied || i === active ? 255 : 128;
+        });
+    }
+
+    _startList() {
+        for (const window of global.display.list_all_windows())
+            this._trackWindow(window);
+        this._buildList();
+    }
+
+    _stopList() {
+        this._disconnectWorkspaces();
+        for (const window of [...this._windowSignals.keys()])
+            this._untrackWindow(window);
+        this._list.destroy_all_children();
+    }
+
+    _connectWorkspaces() {
+        const manager = global.workspace_manager;
+        for (let i = 0; i < manager.get_n_workspaces(); i++) {
+            const workspace = manager.get_workspace_by_index(i);
+            this._workspaceSignals.push(
+                [workspace, workspace.connect('window-added', (_ws, window) => {
+                    this._trackWindow(window);
+                    this._queueUpdate();
+                })],
+                [workspace, workspace.connect('window-removed', () => this._queueUpdate())]
+            );
+        }
+    }
+
+    _disconnectWorkspaces() {
+        for (const [workspace, id] of this._workspaceSignals)
+            workspace.disconnect(id);
+        this._workspaceSignals = [];
+    }
+
+    // Moves and sticky changes arrive as window-added/removed on the workspaces;
+    // only skip-taskbar changes on regular windows need watching per window
+    _trackWindow(window) {
+        if (this._windowSignals.has(window) || !isRegularWindow(window))
+            return;
+        this._windowSignals.set(window, [
+            window.connect('notify::skip-taskbar', () => this._queueUpdate()),
+            window.connect('unmanaged', () => this._untrackWindow(window)),
+        ]);
+    }
+
+    _untrackWindow(window) {
+        for (const id of this._windowSignals.get(window) ?? [])
+            window.disconnect(id);
+        this._windowSignals.delete(window);
+    }
+
+    _rebuildList() {
+        if (this._isList)
+            this._buildList();
+        this._update();
+    }
+
+    _buildList() {
+        this._list.destroy_all_children();
+        this._disconnectWorkspaces();
+        this._connectWorkspaces();
+        const total = global.workspace_manager.get_n_workspaces();
+
+        for (let i = 0; i < total; i++) {
+            const item = new St.Bin({
+                style_class: 'wni-workspace',
+                y_align: Clutter.ActorAlign.CENTER,
+                reactive: true,
+                track_hover: true,
+                child: new St.Label({text: `${i + 1}`}),
+            });
+            item.connect('button-press-event', (_actor, event) => {
+                if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+                    return Clutter.EVENT_PROPAGATE;
+                switchToWorkspace(i);
+                return Clutter.EVENT_STOP;
+            });
+            item.connect('touch-event', (_actor, event) => {
+                if (event.type() === Clutter.EventType.TOUCH_BEGIN)
+                    switchToWorkspace(i);
+                return Clutter.EVENT_STOP;
+            });
+            this._list.add_child(item);
+        }
+    }
+
     destroy() {
+        if (this._idleId) {
+            GLib.source_remove(this._idleId);
+            this._idleId = 0;
+        }
+        this._stopList();
         if (this._wsSignal) {
             global.workspace_manager.disconnect(this._wsSignal);
             this._wsSignal = null;
@@ -77,9 +259,17 @@ class WorkspaceIndicator extends PanelMenu.Button {
             global.workspace_manager.disconnect(this._wsCountSignal);
             this._wsCountSignal = null;
         }
+        if (this._wsReorderedSignal) {
+            global.workspace_manager.disconnect(this._wsReorderedSignal);
+            this._wsReorderedSignal = null;
+        }
         if (this._settingsSignal) {
             this._settings.disconnect(this._settingsSignal);
             this._settingsSignal = null;
+        }
+        if (this._styleSignal) {
+            this._settings.disconnect(this._styleSignal);
+            this._styleSignal = null;
         }
         if (this._overviewShowingSignal) {
             Main.overview.disconnect(this._overviewShowingSignal);
@@ -127,7 +317,7 @@ class WorkspaceKeybindings {
         this._groups = {
             'shortcut-switch-to-workspace': {
                 setting: 'enable-switch-shortcuts',
-                handler: index => this._switchTo(index),
+                handler: switchToWorkspace,
             },
             'shortcut-move-to-workspace': {
                 setting: 'enable-move-shortcuts',
@@ -166,11 +356,6 @@ class WorkspaceKeybindings {
                 this._releaseConflicts(name);
             }
         }
-    }
-
-    _switchTo(index) {
-        const workspace = global.workspace_manager.get_workspace_by_index(index);
-        workspace?.activate(global.get_current_time());
     }
 
     _moveTo(index) {

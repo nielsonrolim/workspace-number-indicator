@@ -3,7 +3,7 @@
 ![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-45--51-blue)
 ![License](https://img.shields.io/badge/license-GPL--2.0-green)
 
-A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`) or current/total (`2 / 4`), and lets you place the indicator on the left or right side of the panel. Compatible with GNOME Shell 45–51.
+A GNOME Shell extension that displays the current workspace number in the top panel. Supports showing just the current workspace (`2`), current/total (`2 / 4`), or a clickable list of all workspaces (`1 2 [3] 4`), and lets you place the indicator on the left or right side of the panel. Compatible with GNOME Shell 45–51.
 
 <!-- Add screenshot here -->
 
@@ -11,11 +11,12 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 
 - Displays current workspace number in the top panel
 - Optional `current / total` format (e.g. `2 / 4`) or just the current number (e.g. `2`)
+- Optional list of all workspaces as clickable numbers, highlighting the active one and dimming the empty ones
 - Configurable panel position: left or right
 - When placed on the left, choose before or after the Activities button
 - Optionally hide the Activities button workspace pills
 - Optional keyboard shortcuts: `Super + 1 … 0` switches to workspace 1–10 and `Shift + Super + 1 … 0` moves the current window there
-- Left-click the indicator to toggle the Overview
+- Left- or right-click the indicator to toggle the Overview (in the list style, left-clicking or tapping a number switches to that workspace, and right-click toggles the Overview)
 - The indicator is highlighted while the Overview is open, matching the Activities button pills
 
 ## Installation
@@ -48,10 +49,11 @@ The options are in the **Display** and **Keyboard shortcuts** groups of the pref
 
 | Option | Key | Type | Default | Effect |
 |--------|-----|------|---------|--------|
-| Show total number of workspaces | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`) |
-| Hide workspace pills | `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
+| Indicator style | `indicator-style` | string | `'number'` | `'number'` → shows only the current workspace; `'list'` → shows every workspace as a number (click to switch), with the active one highlighted and empty ones dimmed |
+| Show total number of workspaces | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`). Disabled in the preferences window when the style is list |
 | Panel position | `panel-position` | string | `'left'` | Which side of the top bar: `'left'` or `'right'` |
-| Left side placement | `left-placement` | string | `'after'` | When the panel position is left: `'before'` or `'after'` the Activities button. Disabled in the preferences window when the position is right |
+| Hide workspace pills | `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
+| Left side placement | `left-placement` | string | `'after'` | When the panel position is left: `'before'` or `'after'` the Activities button. Disabled in the preferences window when the position is right or the workspace pills are hidden |
 | Switch to workspace | `enable-switch-shortcuts` | boolean | `false` | `true` → `Super + 1 … 0` switches to workspace 1–10 |
 | Move to workspace | `enable-move-shortcuts` | boolean | `false` | `true` → `Shift + Super + 1 … 0` moves the focused window to workspace 1–10 and follows it |
 
@@ -68,6 +70,7 @@ EXT=~/.local/share/gnome-shell/extensions/workspace-number-indicator@nielsonroli
 SCHEMA=org.gnome.shell.extensions.workspace-number-indicator
 
 gsettings --schemadir "$EXT/schemas" list-recursively "$SCHEMA"
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" indicator-style list
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" show-total false
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" hide-workspace-pills true
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" panel-position right
@@ -107,6 +110,11 @@ killall -HUP gnome-shell
 **Reload after changes (Wayland — nested session):**
 ```bash
 dbus-run-session -- gnome-shell --nested --wayland
+```
+
+**Reload the preferences window after changes:** close it and stop the background process, which keeps the old `prefs.js` loaded:
+```bash
+pkill -f org.gnome.Shell.Extensions
 ```
 
 **View logs:**

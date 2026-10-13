@@ -2,6 +2,15 @@
 <schemalist>
   <schema id="org.gnome.shell.extensions.workspace-number-indicator"
           path="/org/gnome/shell/extensions/workspace-number-indicator/">
+    <key name="indicator-style" type="s">
+      <choices>
+        <choice value="number"/>
+        <choice value="list"/>
+      </choices>
+      <default>'number'</default>
+      <summary>Indicator style</summary>
+      <description>"number" shows only the current workspace; "list" shows every workspace as a clickable number, highlighting the active one and dimming the empty ones.</description>
+    </key>
     <key name="show-total" type="b">
       <default>true</default>
       <summary>Show total number of workspaces</summary>

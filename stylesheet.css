@@ -1,0 +1,21 @@
+/* Text keeps the panel's colour; empty workspaces are dimmed from extension.js */
+.wni-workspace-list {
+    spacing: 2px;
+}
+
+.wni-workspace {
+    padding: 0 6px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Neutral greys read on both dark and light panels; hover sits between
+   no background and the active one */
+.wni-workspace:hover {
+    background-color: rgba(160, 160, 160, 0.25);
+}
+
+.wni-workspace-active,
+.wni-workspace-active:hover {
+    background-color: rgba(128, 128, 128, 0.45);
+}
