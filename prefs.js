@@ -6,7 +6,7 @@ import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/
 
 export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        const settings = this.getSettings('org.gnome.shell.extensions.workspace-number-indicator');
+        const settings = this.getSettings();
 
         const page = new Adw.PreferencesPage({
             title: 'General',

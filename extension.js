@@ -273,7 +273,7 @@ class WorkspaceKeybindings {
 
 export default class WorkspaceNumberExtension extends Extension {
     enable() {
-        this._settings = this.getSettings('org.gnome.shell.extensions.workspace-number-indicator');
+        this._settings = this.getSettings();
         this._addIndicator();
         const onPositionChange = () => {
             this._removeIndicator();
