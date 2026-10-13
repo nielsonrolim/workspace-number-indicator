@@ -155,8 +155,8 @@ class WorkspaceIndicator extends PanelMenu.Button {
             else
                 item.remove_style_class_name('wni-workspace-active');
             // Empty workspaces are dimmed, keeping the panel's own text colour.
-            // Hovering undims them, so the hover background isn't dimmed too
-            item.opacity = occupied || i === active || item.hover ? 255 : 128;
+            // Only the label is dimmed, so the hover background stays visible
+            item.child.opacity = occupied || i === active ? 255 : 128;
         });
     }
 
@@ -223,14 +223,13 @@ class WorkspaceIndicator extends PanelMenu.Button {
         const total = global.workspace_manager.get_n_workspaces();
 
         for (let i = 0; i < total; i++) {
-            const item = new St.Label({
-                text: `${i + 1}`,
+            const item = new St.Bin({
                 style_class: 'wni-workspace',
                 y_align: Clutter.ActorAlign.CENTER,
                 reactive: true,
                 track_hover: true,
+                child: new St.Label({text: `${i + 1}`}),
             });
-            item.connect('notify::hover', () => this._updateList());
             item.connect('button-press-event', (_actor, event) => {
                 if (event.get_button() !== Clutter.BUTTON_PRIMARY)
                     return Clutter.EVENT_PROPAGATE;
