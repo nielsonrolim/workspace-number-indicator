@@ -37,18 +37,37 @@ Then reload GNOME Shell (X11: `killall -HUP gnome-shell`; Wayland: log out and b
 
 ## Settings
 
-Open preferences with:
+Open the preferences window with:
 
 ```bash
 gnome-extensions prefs workspace-number-indicator@nielsonrolim.github.io
 ```
 
-| Key | Type | Default | Effect |
-|-----|------|---------|--------|
-| `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`) |
-| `panel-position` | string | `'left'` | Which side of the panel: `'left'` or `'right'` |
-| `left-placement` | string | `'after'` | When on the left: `'before'` or `'after'` the Activities button |
-| `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
+All options are in the **Display** group of the preferences window:
+
+| Option | Key | Type | Default | Effect |
+|--------|-----|------|---------|--------|
+| Show total number of workspaces | `show-total` | boolean | `true` | `true` → shows `current / total` (e.g. `2 / 4`); `false` → shows only `current` (e.g. `2`) |
+| Hide workspace pills | `hide-workspace-pills` | boolean | `false` | `true` → hides the Activities button and its workspace pills from the top bar |
+| Panel position | `panel-position` | string | `'left'` | Which side of the top bar: `'left'` or `'right'` |
+| Left side placement | `left-placement` | string | `'after'` | When the panel position is left: `'before'` or `'after'` the Activities button. Disabled in the preferences window when the position is right |
+
+All changes apply immediately, without reloading GNOME Shell.
+
+### Command line
+
+The options can also be read and changed with `gsettings`, pointing it at the extension's schema directory:
+
+```bash
+EXT=~/.local/share/gnome-shell/extensions/workspace-number-indicator@nielsonrolim.github.io
+SCHEMA=org.gnome.shell.extensions.workspace-number-indicator
+
+gsettings --schemadir "$EXT/schemas" list-recursively "$SCHEMA"
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" show-total false
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" hide-workspace-pills true
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" panel-position right
+gsettings --schemadir "$EXT/schemas" set "$SCHEMA" left-placement before
+```
 
 ## Development
 
