@@ -43,6 +43,14 @@ class WorkspaceIndicator extends PanelMenu.Button {
             'changed::show-total',
             this._onUpdate
         );
+
+        // Highlight like the Activities button while the Overview is open
+        this._overviewShowingSignal = Main.overview.connect('showing',
+            () => this.add_style_pseudo_class('checked'));
+        this._overviewHidingSignal = Main.overview.connect('hiding',
+            () => this.remove_style_pseudo_class('checked'));
+        if (Main.overview.visible)
+            this.add_style_pseudo_class('checked');
     }
 
     _update() {
@@ -69,6 +77,14 @@ class WorkspaceIndicator extends PanelMenu.Button {
         if (this._settingsSignal) {
             this._settings.disconnect(this._settingsSignal);
             this._settingsSignal = null;
+        }
+        if (this._overviewShowingSignal) {
+            Main.overview.disconnect(this._overviewShowingSignal);
+            this._overviewShowingSignal = null;
+        }
+        if (this._overviewHidingSignal) {
+            Main.overview.disconnect(this._overviewHidingSignal);
+            this._overviewHidingSignal = null;
         }
         super.destroy();
     }
