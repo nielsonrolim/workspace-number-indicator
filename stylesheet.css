@@ -1,3 +1,4 @@
+/* Text keeps the panel's colour; empty workspaces are dimmed from extension.js */
 .wni-workspace-list {
     spacing: 2px;
 }
@@ -6,19 +7,14 @@
     padding: 0 6px;
     border-radius: 4px;
     font-weight: bold;
-    color: rgba(255, 255, 255, 0.5);
 }
 
-.wni-workspace-occupied {
-    color: #ffffff;
-}
-
+/* Neutral grey reads on both dark and light panels */
 .wni-workspace:hover {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(128, 128, 128, 0.2);
 }
 
-.wni-workspace-active {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.25);
+.wni-workspace-active,
+.wni-workspace-active:hover {
+    background-color: rgba(128, 128, 128, 0.45);
 }

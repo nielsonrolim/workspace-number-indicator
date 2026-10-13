@@ -29,12 +29,9 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
             subtitle: 'Show only the current workspace, or every workspace as a clickable number',
             model: styleModel,
         });
-        styleRow.selected = styles.indexOf(settings.get_string('indicator-style'));
         styleRow.connect('notify::selected', () => {
-            settings.set_string('indicator-style', styles[styleRow.selected]);
-        });
-        const styleSignal = settings.connect('changed::indicator-style', () => {
-            styleRow.selected = styles.indexOf(settings.get_string('indicator-style'));
+            if (styleRow.selected !== Gtk.INVALID_LIST_POSITION)
+                settings.set_string('indicator-style', styles[styleRow.selected]);
         });
         group.add(styleRow);
 
@@ -46,11 +43,13 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
 
         settings.bind('show-total', row, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        const updateTotalSensitivity = () => {
-            row.sensitive = settings.get_string('indicator-style') === 'number';
+        const syncStyle = () => {
+            const style = settings.get_string('indicator-style');
+            styleRow.selected = Math.max(styles.indexOf(style), 0);
+            row.sensitive = style === 'number';
         };
-        updateTotalSensitivity();
-        const totalSensitivitySignal = settings.connect('changed::indicator-style', updateTotalSensitivity);
+        syncStyle();
+        const styleSignal = settings.connect('changed::indicator-style', syncStyle);
 
         const pillsRow = new Adw.SwitchRow({
             title: 'Hide workspace pills',
@@ -123,7 +122,6 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
 
         window.connect('close-request', () => {
             settings.disconnect(styleSignal);
-            settings.disconnect(totalSensitivitySignal);
             settings.disconnect(positionSignal);
             settings.disconnect(placementSignal);
             settings.disconnect(sensitivitySignal);
