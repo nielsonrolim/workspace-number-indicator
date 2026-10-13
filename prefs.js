@@ -40,7 +40,7 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         posRow.connect('notify::selected', () => {
             settings.set_string('panel-position', positions[posRow.selected]);
         });
-        settings.connect('changed::panel-position', () => {
+        const positionSignal = settings.connect('changed::panel-position', () => {
             posRow.selected = positions.indexOf(settings.get_string('panel-position'));
         });
         group.add(posRow);
@@ -57,7 +57,7 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
         leftPlacementRow.connect('notify::selected', () => {
             settings.set_string('left-placement', placements[leftPlacementRow.selected]);
         });
-        settings.connect('changed::left-placement', () => {
+        const placementSignal = settings.connect('changed::left-placement', () => {
             leftPlacementRow.selected = placements.indexOf(settings.get_string('left-placement'));
         });
 
@@ -65,8 +65,15 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
             leftPlacementRow.sensitive = settings.get_string('panel-position') === 'left';
         };
         updateSensitivity();
-        settings.connect('changed::panel-position', updateSensitivity);
+        const sensitivitySignal = settings.connect('changed::panel-position', updateSensitivity);
 
         group.add(leftPlacementRow);
+
+        window.connect('close-request', () => {
+            settings.disconnect(positionSignal);
+            settings.disconnect(placementSignal);
+            settings.disconnect(sensitivitySignal);
+            return false;
+        });
     }
 }

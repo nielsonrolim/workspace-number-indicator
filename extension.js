@@ -96,8 +96,14 @@ export default class WorkspaceNumberExtension extends Extension {
             index = this._settings.get_string('left-placement') === 'before' ? 0 : 1;
         else
             index = 0;
-        this._indicator = new WorkspaceIndicator(this._settings);
-        Main.panel.addToStatusArea('workspace-indicator', this._indicator, index, box);
+        const indicator = new WorkspaceIndicator(this._settings);
+        try {
+            Main.panel.addToStatusArea(this.uuid, indicator, index, box);
+        } catch (e) {
+            indicator.destroy();
+            throw e;
+        }
+        this._indicator = indicator;
     }
 
     _removeIndicator() {
