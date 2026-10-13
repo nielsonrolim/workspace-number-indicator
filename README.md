@@ -57,7 +57,7 @@ The options are in the **Display** and **Keyboard shortcuts** groups of the pref
 
 All changes apply immediately, without reloading GNOME Shell.
 
-The **Switch to workspace** and **Move to workspace** options are in the **Keyboard shortcuts** group. While they are on, any system shortcut using the same keys (for example GNOME's `Super + 1…9` "switch to application" shortcuts) is disabled and then restored when the option is turned off or the extension is disabled. Don't enable equivalent shortcuts in another extension (such as Space Bar) at the same time, since both would grab the same keys.
+The keyboard shortcut options are described in [Keyboard shortcuts](#keyboard-shortcuts).
 
 ### Command line
 
@@ -75,6 +75,27 @@ gsettings --schemadir "$EXT/schemas" set "$SCHEMA" left-placement before
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" enable-switch-shortcuts true
 gsettings --schemadir "$EXT/schemas" set "$SCHEMA" enable-move-shortcuts true
 ```
+
+## Keyboard shortcuts
+
+Both groups of shortcuts are off by default. Turn them on in the **Keyboard shortcuts** group of the preferences window.
+
+| Shortcut | Action | Option |
+|----------|--------|--------|
+| `Super + 1` … `Super + 9` | Switch to workspace 1–9 | Switch to workspace |
+| `Super + 0` | Switch to workspace 10 | Switch to workspace |
+| `Shift + Super + 1` … `Shift + Super + 9` | Move the focused window to workspace 1–9 and follow it | Move to workspace |
+| `Shift + Super + 0` | Move the focused window to workspace 10 and follow it | Move to workspace |
+
+- The shortcuts also work while the Overview is open.
+- Shortcuts for workspaces that don't exist do nothing. With dynamic workspaces, only the workspaces that currently exist can be reached.
+- Windows shown on all workspaces are not moved.
+
+### Conflicts with system shortcuts
+
+While a group is on, any system shortcut that uses the same keys is disabled. For example, GNOME uses `Super + 1…9` by default to open the apps pinned to the dash. The original shortcuts are restored when the option is turned off or the extension is disabled. The backup is saved in the extension settings, so it is also restored after a GNOME Shell crash.
+
+Don't enable equivalent shortcuts in another extension (such as Space Bar) at the same time, since both would grab the same keys.
 
 ## Development
 
