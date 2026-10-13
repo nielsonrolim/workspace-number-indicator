@@ -92,11 +92,14 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
             leftPlacementRow.selected = placements.indexOf(settings.get_string('left-placement'));
         });
 
+        // Placement only matters on the left, next to a visible Activities button
         const updateSensitivity = () => {
-            leftPlacementRow.sensitive = settings.get_string('panel-position') === 'left';
+            leftPlacementRow.sensitive = settings.get_string('panel-position') === 'left' &&
+                !settings.get_boolean('hide-workspace-pills');
         };
         updateSensitivity();
         const sensitivitySignal = settings.connect('changed::panel-position', updateSensitivity);
+        const pillsSensitivitySignal = settings.connect('changed::hide-workspace-pills', updateSensitivity);
 
         group.add(leftPlacementRow);
 
@@ -125,6 +128,7 @@ export default class WorkspaceIndicatorPrefs extends ExtensionPreferences {
             settings.disconnect(positionSignal);
             settings.disconnect(placementSignal);
             settings.disconnect(sensitivitySignal);
+            settings.disconnect(pillsSensitivitySignal);
             return false;
         });
     }
