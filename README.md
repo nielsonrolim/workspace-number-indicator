@@ -23,7 +23,7 @@ A GNOME Shell extension that displays the current workspace number in the top pa
 
 ### GNOME Extensions website
 
-Install from [extensions.gnome.org](https://extensions.gnome.org](https://extensions.gnome.org/extension/9809/workspace-number-indicator/)
+Install from [shexli](https://extensions.gnome.org/extension/9809/workspace-number-indicator)
 
 ### Manual install
 
